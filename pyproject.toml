@@ -1,7 +1,7 @@
 [project]
 name = "model-downloader"
 version = "0.1.0"
-description = "Add your description here"
+description = "大模型下载脚本"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
