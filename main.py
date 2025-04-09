@@ -31,6 +31,14 @@ def setup_parser():
         default=".",
         help="指定下载文件的目录，默认为当前目录",
     )
+    # 新增参数：是否生成 Modelfile 文件，默认为 False
+    parser.add_argument(
+        "-g",
+        "--generate-modelfile",
+        action="store_true",
+        default=False,
+        help="是否生成 Modelfile 文件，默认为 False",
+    )
     return parser
 
 
@@ -43,6 +51,7 @@ def main():
     model_id = args.model
     files = args.file
     download_dir = Path(args.download_dir)  # 获取下载目录
+    generate_modelfile = args.generate_modelfile  # 获取是否生成 Modelfile 的参数
 
     if files == "all":
         target_path = download_dir / model_id
@@ -54,7 +63,9 @@ def main():
         file_list = files.split(",")
         print(f"共需下载文件：{len(file_list)} 个")
         for file in file_list:
-            create_model_file(model_id, file)
+            # 根据参数决定是否生成 Modelfile 文件
+            if generate_modelfile:
+                create_model_file(model_id, file)
             target_path = download_dir / model_id / file
             if target_path.exists():
                 print(f"{target_path} 已存在，跳过下载")
