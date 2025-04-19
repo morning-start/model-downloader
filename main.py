@@ -1,14 +1,11 @@
 import argparse
+import os
 from pathlib import Path
 
 from modelscope import model_file_download, snapshot_download
 
-# 提取常量，提高代码可维护性
-MODELFILE_DIR = Path("./Modelfile")
-OLLAMA_COMMAND_TEMPLATE = "ollama create {name} -f {path}"
 
-
-def setup_parser():
+def setup_parser() -> argparse.ArgumentParser:
     """
     配置命令行参数解析器。
 
@@ -28,8 +25,8 @@ def setup_parser():
         "-d",
         "--download-dir",
         type=str,
-        default=".",
-        help="指定下载文件的目录，默认为当前目录",
+        default=os.getenv("MODELSCOPE_CACHE", "."),
+        help="指定下载文件的目录，默认为环境变量 MODELSCOPE_CACHE，若无则为当前目录",
     )
     # 新增参数：是否生成 Modelfile 文件，默认为 False
     parser.add_argument(
@@ -39,7 +36,37 @@ def setup_parser():
         default=False,
         help="是否生成 Modelfile 文件，默认为 False",
     )
+    # 新增参数：是否强制覆盖已存在文件，默认为 False
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        default=False,
+        help="是否强制覆盖已存在文件，默认为 False",
+    )
     return parser
+
+
+def download_file(
+    target_path: Path, model_id: str, file: str, download_dir: Path, force: bool
+) -> None:
+    """
+    下载指定模型的文件，如果文件已存在且不强制覆盖，则跳过下载。
+
+    :param target_path: 目标文件路径
+    :param model_id: 模型的 ID
+    :param file: 文件名
+    :param download_dir: 下载目录
+    :param force: 是否强制覆盖已存在文件
+    """
+    if target_path.exists() and not force:
+        print(f"{target_path} 已存在，跳过下载")
+        return
+    if target_path.exists() and force:
+        print(f"{target_path} 已存在，将进行覆盖下载")
+    model_file_download(
+        model_id=model_id, file_path=file, local_dir=download_dir / model_id
+    )
 
 
 def main():
@@ -48,14 +75,15 @@ def main():
     """
     parser = setup_parser()
     args = parser.parse_args()
-    model_id = args.model
-    files = args.file
-    download_dir = Path(args.download_dir)  # 获取下载目录
-    generate_modelfile = args.generate_modelfile  # 获取是否生成 Modelfile 的参数
+    model_id: str = args.model
+    files: str = args.file
+    download_dir: Path = Path(args.download_dir)  # 获取下载目录
+    generate_modelfile: bool = args.generate_modelfile  # 获取是否生成 Modelfile 的参数
+    force: bool = args.force  # 获取是否强制覆盖的参数
 
     if files == "all":
         target_path = download_dir / model_id
-        if target_path.exists():
+        if target_path.exists() and not force:
             print(f"{target_path} 已存在，跳过下载")
         else:
             snapshot_download(model_id=model_id, local_dir=target_path)
@@ -63,25 +91,23 @@ def main():
         file_list = files.split(",")
         print(f"共需下载文件：{len(file_list)} 个")
         for file in file_list:
-            # 根据参数决定是否生成 Modelfile 文件
             if generate_modelfile:
                 create_model_file(model_id, file)
-            target_path = download_dir / model_id / file
-            if target_path.exists():
-                print(f"{target_path} 已存在，跳过下载")
-            else:
-                model_file_download(
-                    model_id=model_id, file_path=file, local_dir=download_dir / model_id
-                )
+            download_file(
+                download_dir / model_id / file, model_id, file, download_dir, force
+            )
 
 
-def create_model_file(model_id: str, file: str):
+def create_model_file(model_id: str, file: str) -> None:
     """
     为指定模型和文件创建 Modelfile，并打印 ollama 创建命令。
 
     :param model_id: 模型的 ID
     :param file: 文件名
     """
+    MODELFILE_DIR = Path("./Modelfile")
+    OLLAMA_COMMAND_TEMPLATE = "ollama create {name} -f {path}"
+
     file_path = Path(file)
     if file_path.suffix == ".gguf":
         content = f"FROM ../{model_id}/{file_path.name}"
