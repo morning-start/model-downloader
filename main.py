@@ -36,19 +36,19 @@ def setup_parser() -> argparse.ArgumentParser:
         default=False,
         help="是否生成 Modelfile 文件，默认为 False",
     )
-    # 新增参数：是否强制覆盖已存在文件，默认为 False
+    # 新增参数：是否覆盖已存在文件，默认为 False
     parser.add_argument(
-        "-f",
-        "--force",
+        "-o",
+        "--overwrite",
         action="store_true",
         default=False,
-        help="是否强制覆盖已存在文件，默认为 False",
+        help="是否覆盖已存在文件，默认为 False",
     )
     return parser
 
 
 def download_file(
-    target_path: Path, model_id: str, file: str, download_dir: Path, force: bool
+    target_path: Path, model_id: str, file: str, download_dir: Path, overwrite: bool
 ) -> None:
     """
     下载指定模型的文件，如果文件已存在且不强制覆盖，则跳过下载。
@@ -59,10 +59,10 @@ def download_file(
     :param download_dir: 下载目录
     :param force: 是否强制覆盖已存在文件
     """
-    if target_path.exists() and not force:
+    if target_path.exists() and not overwrite:
         print(f"{target_path} 已存在，跳过下载")
         return
-    if target_path.exists() and force:
+    if target_path.exists() and overwrite:
         print(f"{target_path} 已存在，将进行覆盖下载")
     model_file_download(
         model_id=model_id, file_path=file, local_dir=download_dir / model_id
@@ -79,11 +79,11 @@ def main():
     files: str = args.file
     download_dir: Path = Path(args.download_dir)  # 获取下载目录
     generate_modelfile: bool = args.generate_modelfile  # 获取是否生成 Modelfile 的参数
-    force: bool = args.force  # 获取是否强制覆盖的参数
+    overwrite: bool = args.overwrite  # 获取是否覆盖的参数
 
     if files == "all":
         target_path = download_dir / model_id
-        if target_path.exists() and not force:
+        if target_path.exists() and not overwrite:
             print(f"{target_path} 已存在，跳过下载")
         else:
             snapshot_download(model_id=model_id, local_dir=target_path)
@@ -94,7 +94,7 @@ def main():
             if generate_modelfile:
                 create_model_file(model_id, file)
             download_file(
-                download_dir / model_id / file, model_id, file, download_dir, force
+                download_dir / model_id / file, model_id, file, download_dir, overwrite
             )
 
 
