@@ -1,0 +1,1 @@
+pyinstaller --onefile --version-file=version_file.txt --icon logo.ico --name model_downloader main.py
